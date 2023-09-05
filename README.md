@@ -80,6 +80,7 @@ Limitations
 While the application has been designed to meet various requirements, it also has some limitations:
 
 - No Configured Email Backend: Currently, the application does not have a configured email backend. As a result, registered users are verified by default, instead of receiving an email for verification.
+- I left DEBUG=True due to collectstatic issues with render(Cloud service)
 
 ## API Endpoints
 
