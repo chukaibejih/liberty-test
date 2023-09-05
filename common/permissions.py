@@ -9,6 +9,16 @@ class IsOwnerOrReadOnly(BasePermission):
 
         # Allow PUT, PATCH, DELETE requests only if the user is the owner of the blog
         return obj.id == request.user.id
+    
+
+class IsBlogOwnerOrReadOnly(BasePermission):
+    def has_object_permission(self, request, view, obj):
+        # Allow GET, HEAD, OPTIONS requests (read-only) for any user
+        if request.method in ["GET", "HEAD", "OPTIONS"]:
+            return True
+
+        # Allow PUT, PATCH, DELETE requests only if the user is the owner of the blog
+        return obj.author == request.user
 
 
 

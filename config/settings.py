@@ -44,6 +44,7 @@ INSTALLED_APPS = [
 
     # local apps
     'account.apps.AccountConfig',
+    'blog.apps.BlogConfig',
 
     # Third party apps
     'drf_yasg',
