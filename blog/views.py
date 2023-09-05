@@ -1,4 +1,6 @@
-from rest_framework import viewsets, generics, permissions, filters
+from rest_framework import viewsets, generics, permissions, filters, status
+from rest_framework.views import APIView
+from rest_framework.response import Response
 from .models import Blog, BlogSharing
 from .serializers import (
     BlogEditSerializer,
@@ -6,12 +8,12 @@ from .serializers import (
     BlogSharingSerializer,
     AuthorsWithAccessSerializer,
 )
-from common.permissions import IsOwnerOrReadOnly, IsBlogOwnerOrSharedWith
+from common.permissions import IsBlogOwnerOrReadOnly, IsBlogOwnerOrSharedWith
 from common.pagination import CustomPagination
-
+from drf_yasg.utils import swagger_auto_schema
 
 class BlogViewset(viewsets.ModelViewSet):
-    queryset = Blog
+    queryset = Blog.objects.all()
     serializer_class = BlogSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = CustomPagination
@@ -20,13 +22,21 @@ class BlogViewset(viewsets.ModelViewSet):
         "title",
         "content",
         "blog_author.fullname",
+        "author__first_name",
+        "author__last_name",
     ]  # Fields to search
     ordering_fields = ["title", "created_at", "updated_at"]  # Fields to order by
 
     def get_queryset(self):
         if self.request.user.is_staff or self.request.user.is_superuser:
             return super().get_queryset()
-        return super().get_queryset().filter(blog_author__is_active=True)
+        
+        # Filter based on the author's (user's) is_active field
+        return super().get_queryset().filter(author__is_active=True)
+    
+    # Override the perform_create method to set the author field
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
 
     # Define a get_serializer_class method that uses a different serializer for user creation
     def get_serializer_class(self):
@@ -37,23 +47,21 @@ class BlogViewset(viewsets.ModelViewSet):
     # Define a get_permissions method that sets custom permissions based on the action
     def get_permissions(self):
         if self.action in ["update", "partial_update", "destroy"]:
-            return [
-                permissions.IsAuthenticated(),
-                IsOwnerOrReadOnly(),
-            ]
+            return [ permissions.IsAuthenticated(), IsBlogOwnerOrReadOnly()]
         return super().get_permissions()
 
 
-class BlogSharingView(generics.CreateAPIView):
-    queryset = BlogSharing.objects.all()
-    serializer_class = BlogSharingSerializer
-    permission_classes = [
-        permissions.IsAuthenticated
-    ]  # Ensure the user is authenticated
+class BlogSharingView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
 
-    def perform_create(self, serializer):
-        # Set the owner of the shared blog post to the currently authenticated user
-        serializer.save(owner=self.request.user)
+    @swagger_auto_schema(request_body=BlogSharingSerializer)
+    def post(self, request, *args, **kwargs):
+        serializer = BlogSharingSerializer(data=request.data)
+        if serializer.is_valid():
+            # Set the owner of the shared blog post to the currently authenticated user
+            serializer.save(owner=request.user)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class SharedBlogsListView(generics.ListAPIView):
@@ -69,10 +77,8 @@ class SharedBlogsListView(generics.ListAPIView):
 class AuthorsWithAccessView(generics.ListAPIView):
     queryset = BlogSharing.objects.all()
     serializer_class = AuthorsWithAccessSerializer
-    permission_classes = [
-        permissions.IsAuthenticated
-    ]  # Ensure the user is authenticated
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
         # Filter the BlogSharing objects to get authors with access to each blog
-        return BlogSharing.objects.filter(blog__author=self.request.user)
+        return BlogSharing.objects.filter(owner=self.request.user)
