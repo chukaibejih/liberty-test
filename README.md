@@ -20,6 +20,9 @@
 
 This Django Rest Framework blog application was developed as part of a test to demonstrate proficiency in designing and developing backend systems. It includes features for creating and editing blog posts, user authentication, sharing blogs with other authors, filtering and sorting blogs, and listing authors with access to each blog.
 
+Api Documentaion - https://libertyblog.onrender.com
+
+
 ## Requirements
 
 To run this application, you need the following:
