@@ -109,7 +109,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
                 password=validated_data["password"],
                 is_active=True,
                 is_staff=False,
-                is_verified=False,
+                is_verified=True,
             )
         except Exception as e:
             raise serializers.ValidationError(str(e))
